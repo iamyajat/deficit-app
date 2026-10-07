@@ -1,89 +1,77 @@
-// Generates the PWA PNG icons (no image tooling required): a dark rounded square with a
-// green "rollover" ring and a center dot. Run: node scripts/make-icons.mjs
-import { writeFileSync } from 'node:fs';
-import { deflateSync } from 'node:zlib';
+// Generates the app icons from SVG. PNGs are rasterized with macOS `sips`.
+// Run: node scripts/make-icons.mjs
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const BG = [15, 23, 42];
-const RING = [52, 211, 153];
-const TRACK = [34, 48, 77];
+const publicDir = fileURLToPath(new URL('../public/', import.meta.url));
 
-function crc32(buf) {
-  let c,
-    crc = 0xffffffff;
-  for (let n = 0; n < buf.length; n++) {
-    c = (crc ^ buf[n]) & 0xff;
-    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-    crc = (crc >>> 8) ^ c;
-  }
-  return (crc ^ 0xffffffff) >>> 0;
+// Rollover mark: a loop arrow carrying a "+" — leftover money comes back around.
+// Geometry is on a 512 grid, centered at 256, kept inside the 80% maskable safe zone.
+const R = 118;
+const STROKE = 46;
+const startDeg = -58;
+const sweepDeg = 268;
+const rad = (d) => (d * Math.PI) / 180;
+const pt = (deg, r = R) => [256 + r * Math.cos(rad(deg)), 256 + r * Math.sin(rad(deg))];
+const f = (n) => n.toFixed(2);
+
+const [sx, sy] = pt(startDeg);
+const endDeg = startDeg + sweepDeg;
+const [ex, ey] = pt(endDeg - 6); // stop the stroke under the arrowhead
+// Arrowhead at the end of the arc, pointing along the clockwise tangent.
+const [tx, ty] = [-Math.sin(rad(endDeg)), Math.cos(rad(endDeg))];
+const [nx, ny] = [Math.cos(rad(endDeg)), Math.sin(rad(endDeg))];
+const [ax, ay] = pt(endDeg);
+const tip = [ax + tx * 62, ay + ty * 62];
+const b1 = [ax - tx * 6 + nx * 58, ay - ty * 6 + ny * 58];
+const b2 = [ax - tx * 6 - nx * 58, ay - ty * 6 - ny * 58];
+
+function mark({ fg, accent }) {
+  return `
+  <path d="M ${f(sx)} ${f(sy)} A ${R} ${R} 0 1 1 ${f(ex)} ${f(ey)}" fill="none" stroke="${fg}" stroke-width="${STROKE}" stroke-linecap="round"/>
+  <path d="M ${f(tip[0])} ${f(tip[1])} L ${f(b1[0])} ${f(b1[1])} L ${f(b2[0])} ${f(b2[1])} Z" fill="${fg}" stroke="${fg}" stroke-width="10" stroke-linejoin="round"/>
+  <path d="M256 222 V290 M222 256 H290" stroke="${accent}" stroke-width="30" stroke-linecap="round"/>`;
 }
 
-function chunk(type, data) {
-  const len = Buffer.alloc(4);
-  len.writeUInt32BE(data.length);
-  const td = Buffer.concat([Buffer.from(type), data]);
-  const crc = Buffer.alloc(4);
-  crc.writeUInt32BE(crc32(td));
-  return Buffer.concat([len, td, crc]);
-}
+const defs = `
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7B6CF6"/>
+      <stop offset="1" stop-color="#4A3AD0"/>
+    </linearGradient>
+  </defs>`;
 
-function png(size, { rounded }) {
-  const raw = Buffer.alloc(size * (size * 4 + 1));
-  const c = size / 2;
-  const rOuter = size * 0.34;
-  const rInner = size * 0.24;
-  const corner = size * 0.22;
-  for (let y = 0; y < size; y++) {
-    raw[y * (size * 4 + 1)] = 0;
-    for (let x = 0; x < size; x++) {
-      const px = x + 0.5;
-      const py = y + 0.5;
-      let a = 255;
-      if (rounded) {
-        const dx = Math.max(corner - px, px - (size - corner), 0);
-        const dy = Math.max(corner - py, py - (size - corner), 0);
-        const d = Math.hypot(dx, dy);
-        a = Math.round(255 * Math.min(1, Math.max(0, corner - d + 0.5)));
-      }
-      const dist = Math.hypot(px - c, py - c);
-      // angle from 12 o'clock, clockwise, 0..1
-      const ang = ((Math.atan2(px - c, c - py) / (2 * Math.PI)) + 1) % 1;
-      let col = BG;
-      if (dist >= rInner && dist <= rOuter) col = ang <= 0.75 ? RING : TRACK;
-      else if (dist <= size * 0.08) col = RING;
-      const o = y * (size * 4 + 1) + 1 + x * 4;
-      raw[o] = col[0];
-      raw[o + 1] = col[1];
-      raw[o + 2] = col[2];
-      raw[o + 3] = a;
-    }
-  }
-  const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(size, 0);
-  ihdr.writeUInt32BE(size, 4);
-  ihdr[8] = 8;
-  ihdr[9] = 6;
-  return Buffer.concat([
-    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-    chunk('IHDR', ihdr),
-    chunk('IDAT', deflateSync(raw)),
-    chunk('IEND', Buffer.alloc(0)),
-  ]);
-}
-
-const out = new URL('../public/', import.meta.url);
-writeFileSync(new URL('icon-192.png', out), png(192, { rounded: false }));
-writeFileSync(new URL('icon-512.png', out), png(512, { rounded: false }));
-writeFileSync(new URL('apple-touch-icon.png', out), png(180, { rounded: false }));
-writeFileSync(
-  new URL('icon.svg', out),
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="14" fill="#0f172a"/>
-  <circle cx="32" cy="32" r="18.5" fill="none" stroke="#22304d" stroke-width="6.4"/>
-  <circle cx="32" cy="32" r="18.5" fill="none" stroke="#34d399" stroke-width="6.4"
-    stroke-dasharray="87.2 116.2" transform="rotate(-90 32 32)"/>
-  <circle cx="32" cy="32" r="5" fill="#34d399"/>
+/** Full-bleed square (platforms apply their own mask). */
+const fullBleed = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">${defs}
+  <rect width="512" height="512" fill="url(#bg)"/>${mark({ fg: '#FFFFFF', accent: '#7CF2C0' })}
 </svg>
-`,
-);
-console.log('icons written');
+`;
+
+/** Rounded favicon. */
+const favicon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">${defs}
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>${mark({ fg: '#FFFFFF', accent: '#7CF2C0' })}
+</svg>
+`;
+
+writeFileSync(join(publicDir, 'icon.svg'), favicon);
+
+const tmp = mkdtempSync(join(tmpdir(), 'deficit-icons-'));
+try {
+  const src = join(tmp, 'full.svg');
+  writeFileSync(src, fullBleed);
+  for (const [name, size] of [
+    ['icon-192.png', 192],
+    ['icon-512.png', 512],
+    ['apple-touch-icon.png', 180],
+  ]) {
+    execFileSync('sips', ['-s', 'format', 'png', '-z', String(size), String(size), src, '--out', join(publicDir, name)], {
+      stdio: 'ignore',
+    });
+  }
+} finally {
+  rmSync(tmp, { recursive: true, force: true });
+}
+console.log('icons written to public/');

@@ -16,11 +16,17 @@ export function BalanceCard({ budget, summary }: { budget: Budget; summary?: Per
   const { remaining, carriedIn, allowance, spent, moved, adjusted } = summary;
   const tone = remaining < 0 ? 'neg' : remaining === 0 ? 'zero' : 'pos';
   const label = currentPeriodLabel(budget.period);
+  // Share of this period's available money (carry-in + allowance) still left. Full red bar when overspent.
+  const available = Math.max(carriedIn + allowance, remaining, 1);
+  const pct = remaining < 0 ? 100 : Math.round((remaining / available) * 100);
 
   return (
     <section className={`balance-card tone-${tone}`} aria-live="polite">
       <p className="balance-label">{remaining < 0 ? `Over budget ${label}` : `Left ${label}`}</p>
       <p className="balance-amount">{fmt(Math.abs(remaining))}</p>
+      <div className="meter" aria-hidden="true">
+        <div style={{ width: `${pct}%` }} />
+      </div>
       <dl className="breakdown">
         {carriedIn !== 0 && <Item label="Carried" value={fmt(carriedIn, { signed: true })} tone={carriedIn < 0 ? 'neg' : 'pos'} />}
         <Item label={capitalize(label)} value={fmt(allowance, { signed: true })} />

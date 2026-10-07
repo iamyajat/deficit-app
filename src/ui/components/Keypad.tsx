@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { Icon } from './Icon';
 
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', '⌫'] as const;
 
@@ -53,7 +54,7 @@ export function Keypad({
           aria-label={k === '⌫' ? 'Backspace' : k === '.' ? 'Decimal point' : k}
           onClick={() => onChange(applyKey(value, k))}
         >
-          {k}
+          {k === '⌫' ? <Icon name="backspace" size={26} /> : k}
         </button>
       ))}
     </div>

@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from 'react';
+import { Icon } from './Icon';
 
 export function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
   useEffect(() => {
@@ -13,7 +14,7 @@ export function Sheet({ title, onClose, children }: { title: string; onClose: ()
         <div className="sheet-head">
           <h2>{title}</h2>
           <button className="icon-btn" onClick={onClose} aria-label="Close">
-            ✕
+            <Icon name="close" />
           </button>
         </div>
         {children}

@@ -2,6 +2,7 @@ import { deleteEntry, restoreEntry } from '../../db/repo';
 import { parseISODate } from '../../domain/period';
 import type { Entry } from '../../domain/types';
 import { useApp } from '../state';
+import { Icon } from './Icon';
 
 export function EntryRow({ entry, showDate, onEdit }: { entry: Entry; showDate?: boolean; onEdit?: (e: Entry) => void }) {
   const { fmt, data, attempt, toast } = useApp();
@@ -35,7 +36,7 @@ export function EntryRow({ entry, showDate, onEdit }: { entry: Entry; showDate?:
       </button>
       <span className={`entry-amount ${signed < 0 ? '' : 'pos'}`}>{fmt(signed, { signed: true })}</span>
       <button className="icon-btn subtle" onClick={remove} aria-label="Delete entry">
-        ✕
+        <Icon name="close" size={16} />
       </button>
     </li>
   );

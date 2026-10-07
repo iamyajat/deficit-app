@@ -6,6 +6,7 @@ import { centsToInput, parseCents } from '../../domain/money';
 import { daysBetween, periodAdjective } from '../../domain/period';
 import type { Budget } from '../../domain/types';
 import { BudgetForm } from '../components/BudgetForm';
+import { Icon } from '../components/Icon';
 import { Sheet } from '../components/Sheet';
 import { useApp } from '../state';
 
@@ -32,14 +33,15 @@ export function Settings() {
   };
 
   return (
-    <div className="screen">
+    <div className="screen settings">
       <h1>Settings</h1>
+      <div className="settings-grid">
 
       <section className="card stack">
         <div className="screen-head">
           <h2>Budgets</h2>
           <button className="btn small" onClick={() => setAdding(true)}>
-            + New
+            <Icon name="plus" size={18} /> New
           </button>
         </div>
         <ul className="budget-list">
@@ -107,6 +109,7 @@ export function Settings() {
       </section>
 
       <InstallCard />
+      </div>
 
       {adding && (
         <Sheet title="New budget" onClose={() => setAdding(false)}>
@@ -203,7 +206,9 @@ function StorageStatus() {
   }, []);
   if (persisted === null) return null;
   return persisted ? (
-    <p className="muted small">✓ Storage is marked persistent.</p>
+    <p className="muted small status-ok">
+      <Icon name="check" size={16} /> Storage is marked persistent.
+    </p>
   ) : (
     <p className="muted small">
       Storage isn’t marked persistent, so the browser may clear it.{' '}

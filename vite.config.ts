@@ -8,12 +8,16 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg', 'apple-touch-icon.png'],
+      workbox: {
+        // Precache fonts and icons too, so the app looks right offline.
+        globPatterns: ['**/*.{js,css,html,svg,png,woff2,webmanifest}'],
+      },
       manifest: {
         name: 'Deficit',
         short_name: 'Deficit',
         description: 'Rolling budgets and savings goals, stored on your device.',
-        theme_color: '#0f172a',
-        background_color: '#0f172a',
+        theme_color: '#0f0f12',
+        background_color: '#0f0f12',
         display: 'standalone',
         start_url: '/',
         icons: [

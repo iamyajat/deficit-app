@@ -3,6 +3,7 @@ import { archiveGoal, createGoal, setGoalAchieved, updateGoal } from '../../db/r
 import { goalEtaDays, goalSaved } from '../../domain/goals';
 import { centsToInput, parseCents } from '../../domain/money';
 import type { Goal } from '../../domain/types';
+import { Icon } from '../components/Icon';
 import { MoveSheet } from '../components/MoveSheet';
 import { Sheet } from '../components/Sheet';
 import { useApp } from '../state';
@@ -24,14 +25,16 @@ export function Goals() {
       <div className="screen-head">
         <h1>Goals</h1>
         <button className="btn primary small" onClick={() => setAdding(true)}>
-          + New goal
+          <Icon name="plus" size={18} /> New goal
         </button>
       </div>
 
       {visible.length === 0 && (
-        <p className="muted">
-          Saving for something? Add a goal, then move any budget surplus into it whenever you’re in the green.
-        </p>
+        <div className="empty-state card">
+          <Icon name="target" size={36} />
+          <p>Saving for something?</p>
+          <p className="muted small">Add a goal, then move any budget surplus into it whenever you’re in the green.</p>
+        </div>
       )}
 
       <ul className="goal-list">
@@ -76,7 +79,7 @@ function GoalCard({ goal, onMove, onEdit }: { goal: Goal; onMove: (m: Move) => v
       <p className="goal-meta muted">
         {fmt(saved)} of {fmt(goal.targetCents)}
         {saved >= goal.targetCents && !goal.achievedAt
-          ? ' · fully funded 🎉'
+          ? ' · fully funded'
           : eta !== null && eta > 0
             ? ` · ~${formatEta(eta)} at this pace`
             : ''}

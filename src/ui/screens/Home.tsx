@@ -12,6 +12,7 @@ import { EditSpendSheet } from '../components/EditSpendSheet';
 import { EntryRow } from '../components/EntryRow';
 import { Keypad } from '../components/Keypad';
 import { MoveSheet } from '../components/MoveSheet';
+import { Icon } from '../components/Icon';
 import { useApp } from '../state';
 
 export function Home({ active }: { active: boolean }) {
@@ -45,8 +46,9 @@ export function Home({ active }: { active: boolean }) {
 
   if (activeBudgets.length === 0 || !selectedBudget) {
     return (
-      <div className="screen">
+      <div className="screen welcome-screen">
         <header className="welcome">
+          <img src="/icon.svg" alt="" width={64} height={64} className="welcome-logo" />
           <h1>Deficit</h1>
           <p className="muted">
             Set a budget. Log what you spend. Whatever you don’t use rolls into the next period — and so does whatever you
@@ -69,21 +71,26 @@ export function Home({ active }: { active: boolean }) {
 
   return (
     <div className="screen home">
-      <BudgetSwitcher />
-      <BalanceCard budget={selectedBudget} summary={summary} />
+      <div className="area-switch">
+        <BudgetSwitcher />
+      </div>
+      <div className="area-balance">
+        <BalanceCard budget={selectedBudget} summary={summary} />
+        {maxMovable(bal) > 0 && hasGoals && (
+          <button className="btn ghost move-btn" onClick={() => setMoving(true)}>
+            Move {fmt(bal)} surplus to a goal <Icon name="arrowRight" size={18} />
+          </button>
+        )}
+      </div>
 
-      {maxMovable(bal) > 0 && hasGoals && (
-        <button className="btn ghost move-btn" onClick={() => setMoving(true)}>
-          Move {fmt(bal)} surplus to a goal →
-        </button>
-      )}
-
-      <section className="logger">
+      <section className="logger area-logger" aria-label="Log a spend">
         <div className={`amount-display ${amount ? '' : 'placeholder'}`} aria-live="polite">
           {amount ? fmt(cents ?? 0) : fmt(0)}
         </div>
+        <p className="keyboard-hint muted small">Type an amount, then press Enter</p>
         <div className="log-meta">
           <label className="date-chip">
+            <Icon name="calendar" size={18} />
             <span>{logDate === today ? 'Today' : daysBetween(logDate, today) === 1 ? 'Yesterday' : shortDate(logDate)}</span>
             <input
               type="date"
@@ -104,26 +111,27 @@ export function Home({ active }: { active: boolean }) {
         </div>
         <Keypad value={amount} onChange={setAmount} onSubmit={() => void submit()} captureKeys={active && !moving && !editing} />
         <button className="btn primary log-btn" disabled={!canLog} onClick={() => void submit()}>
-          Log spend
+          {canLog ? `Log ${fmt(cents)}` : 'Log spend'}
         </button>
       </section>
 
-      {recent.length > 0 && (
-        <section>
-          <h2 className="section-title">{currentPeriodLabel(selectedBudget.period)}</h2>
-          <ul className="entry-list">
+      <section className="area-entries">
+        <h2 className="section-title">{currentPeriodLabel(selectedBudget.period)}</h2>
+        {recent.length > 0 ? (
+          <ul className="entry-list card">
             {recent.map((e) => (
               <EntryRow key={e.id} entry={e} showDate={selectedBudget.period !== 'day'} onEdit={setEditing} />
             ))}
           </ul>
-        </section>
-      )}
-
-      {backupStale && (
-        <a className="nudge" href="#settings">
-          Your data only lives on this device. Export a backup →
-        </a>
-      )}
+        ) : (
+          <p className="empty muted small">Nothing logged {currentPeriodLabel(selectedBudget.period)} yet.</p>
+        )}
+        {backupStale && (
+          <a className="nudge" href="#settings">
+            Your data only lives on this device. Export a backup <Icon name="arrowRight" size={14} />
+          </a>
+        )}
+      </section>
 
       {moving && <MoveSheet direction="in" budgetId={selectedBudget.id} onClose={() => setMoving(false)} />}
       {editing && <EditSpendSheet entry={editing} onClose={() => setEditing(null)} />}
