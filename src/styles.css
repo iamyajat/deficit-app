@@ -106,6 +106,24 @@ select {
   min-height: 46px;
   transition: border-color 0.15s, background 0.15s;
 }
+/* iOS Safari zooms the page when focusing any field under 16px. */
+input,
+select {
+  font-size: max(16px, 1rem);
+}
+/* iOS Safari gives date inputs an intrinsic min-width and centered text, so they overflow their container. */
+input[type='date'] {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  text-align: left;
+}
+input[type='date']::-webkit-date-and-time-value {
+  text-align: left;
+  margin: 0;
+}
 input::placeholder {
   color: var(--muted);
   opacity: 0.8;
